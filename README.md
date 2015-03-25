@@ -1,0 +1,1 @@
+This web application utilizes Google Web Tools to bring an intuitive web interface for interacting with an online transportation timetable to Villanova University students. Currently a work-in-progress.
