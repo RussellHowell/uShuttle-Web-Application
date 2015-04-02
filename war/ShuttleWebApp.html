@@ -8,18 +8,22 @@
 <link rel="stylesheet" href="ShuttleWebApp.css"/>
 <script language = "javascript" src="shuttlewebapp/shuttlewebapp.nocache.js">
 </script>
-<body>
 
-<h1> uShuttle Prototype</h1>
-<p>Welcome to the uShuttle Prototype Application</p>
-<table align="center">
-	<tr>
-		<th>Start Location</th>
-		<th style="padding-right:50px; padding-left:80px"></th>
-		<th>End Location</th>	
-	</tr>
-</table>
 
+<body class="body">
+<div id = "logo"; class = "top">
+	<img src="http://localhost:8080/ushuttle/ushuttle_logo.png">
+</div>
+<div class = "wrapper">
+
+
+<h1> Villanova University Shuttle Timetable</h1>
+<p>Please Select your trip-type, starting location, destination, and desired arrival time.</p>
+
+<div id="tripTypeBox"></div>
+<br><br>
+
+<div style="width:500px; margin-left:auto; margin-right:auto; font-weight:bold;" id = "tripgrid"></div>
 
 <div id="locBox"></div>
 <br>
@@ -28,5 +32,10 @@
 <div id="timebox"></div>
 <br>
 <div id="button"></div>
+<br>
+
+<div id="result_string";></div>
+
+</div>
 </body>
 </html>

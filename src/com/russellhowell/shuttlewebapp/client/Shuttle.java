@@ -1,5 +1,7 @@
 package com.russellhowell.shuttlewebapp.client;
 
+import com.google.gwt.user.client.Window;
+
 //Created by Russell Howell
 //Last Modified 3/17/2015
 //************************************//
@@ -10,157 +12,175 @@ package com.russellhowell.shuttlewebapp.client;
 //************************************//
 //Modified for use in the Shuttle Web application
 
-
-import com.google.gwt.i18n.client.NumberFormat;
-
 public class Shuttle {
 	
 protected static int Departure;
 protected static int Arrival;
 protected static int Meridiem;
+private static int tripType;
 protected static String Arrival_String;
 protected static String Departure_String;
 protected static String Result_String;
+protected static boolean tripFound;
 
-	public Shuttle(int start_loc, int end_loc,String time_string, int meridiem) {
+public Shuttle(int start_loc, int end_loc, int timeHourVal, String timeMinuteVal, int meridiem, int tripTypeFlag) {
 		
 		Meridiem = meridiem;
+		tripType = tripTypeFlag;
 		
-		int time_int = formatTime(time_string);
-		
-		shuttleTimes shuttle_info = new shuttleTimes();
-		
-		findTrip(start_loc, end_loc, time_int, shuttle_info);
-		
+		int time_int = formatTime(timeHourVal, timeMinuteVal);
+			ShuttleTimetable shuttle_info = new ShuttleTimetable(tripType);
+			findTrip(start_loc, end_loc, time_int, shuttle_info);
 		formatOutput();
 	}
 	
+
+		
+
 	public String toString(){
 
 		return Result_String;
 		
 	}
 
+	
 	private void formatOutput() {
 		String arrival_string = Integer.toString(Arrival);
 		String departure_string = Integer.toString(Departure);
 		
-		int arrival_sub, departure_sub; //these values hold the the digits of the time before the colon in for the arrival and departure time
+		if(tripFound){
+		int arrivalHour, departureHour; //these values hold the the digits of the time before the colon in for the arrival and departure time
 		
 		if (Arrival < 1000){ 		//A problem occurs if the number before the colon is only one digit, (example being the '9' in '9:30' 
-			arrival_sub = Integer.parseInt(arrival_string.substring(0,1));		//these conditionals take care of that case by changing the index
+			arrivalHour = Integer.parseInt(arrival_string.substring(0,1));		//these conditionals take care of that case by changing the index
 			arrival_string = arrival_string.substring(1);						//of the substring if necessary
-			}else{arrival_sub = Integer.parseInt(arrival_string.substring(0,2));
+			}else{arrivalHour = Integer.parseInt(arrival_string.substring(0,2));
 				 arrival_string = arrival_string.substring(2);
 						 } 		
 		if (Departure < 1000){															
-			departure_sub = Integer.parseInt(departure_string.substring(0,1));	
+			departureHour = Integer.parseInt(departure_string.substring(0,1));	
 		departure_string = departure_string.substring(1);
-			}else{departure_sub = Integer.parseInt(departure_string.substring(0,2));
+			}else{departureHour = Integer.parseInt(departure_string.substring(0,2));
 				departure_string= departure_string.substring(2);}	
 																					
-			
-		//Convert back to 12 hr time
-		String arrival_meridiem, departure_meridiem;
-		if(arrival_sub < 12){
-			arrival_meridiem = "AM";
-		}else if(arrival_sub>12){
-			arrival_meridiem = "PM";
-			arrival_sub = arrival_sub-12;
-			if (arrival_sub>=12 && Meridiem == 1){ //check if the time is after midnight
-				arrival_sub = arrival_sub-12;
-				arrival_meridiem = "AM";
-				if(arrival_sub == 0){arrival_sub=12;}		
-			}
-		}else
-			arrival_meridiem = "PM";
-			
-		if(departure_sub< 12){
-			departure_meridiem = "AM";
-		}else if(departure_sub>12){
-			departure_meridiem = "PM";
-			departure_sub = departure_sub-12;
-			if (departure_sub>=12 && Meridiem == 1){ //check if the time is after midnight
-				departure_sub = departure_sub-12;
-				departure_meridiem = "AM";
-				if(departure_sub == 0){departure_sub=12;}
-			}
-		}else
-			departure_meridiem = "PM";
+		arrival_string = convertTo12Hr(arrivalHour, arrival_string);
+		 departure_string = convertTo12Hr(departureHour, departure_string);
 		
-		arrival_string =  arrival_sub + ":" + arrival_string + " " + arrival_meridiem;
-		departure_string =  departure_sub + ":" + departure_string + " " + departure_meridiem;
 		
-		Result_String = "Departing from " + Departure_String + " at: " + departure_string + "\nArrival at " + Arrival_String + ": " + arrival_string;
-		
+		Result_String = "<h3> Departing from " + Departure_String + ": " + departure_string +
+				"<br>Arrival at " + Arrival_String + ": " + arrival_string + "</h3>";
+		}else {
+			Result_String = "<h3>No trip found, please try a different time</h3>";
+		}
 	}
 	
-	private static void findTrip(int start_loc, int end_loc, int time_int, shuttleTimes shuttle_info) {
+	private String convertTo12Hr(int hr, String min) {
+		String meridiem = null;
+		if(hr <12){
+			meridiem = "AM";
+		}
+		else if(hr >=13 && hr < 24){
+			hr = hr - 12;
+			meridiem = "PM";
+		}
+		else if(hr >= 25){
+			meridiem = "AM";
+			hr = hr - 24;
+		}
+		else if(hr == 12 ){
+			meridiem = "PM";
+		}
+		else if(hr ==24){
+			hr = 12;
+			meridiem = "AM";
+		}
+		
+		return hr + ":" + min + " " + meridiem;
+	}
+
+
+
+
+	private static void findTrip(int start_loc, int end_loc, int time_int, ShuttleTimetable shuttle_info) {
 		
 		//This switch case finds the arrival time based on 
 		//the "arrive by" and destination parameters set by the user
+		
+		/* tripType: OnCampus			: 0
+		 * 			 On Campus Saturday : 1
+		 * 			 Off Campus 		: 2
+		 * 			 Main Line			: 3
+		 * 			 KOP Mall			: 4
+		 */
 		switch(end_loc){
 			
 			case 0:
-				Arrival = findInArray(time_int, shuttle_info.southCampus);
-				Arrival_String = "South Campus";
+				Arrival = findInArray(time_int, shuttle_info.loc0);
+				Arrival_String = shuttle_info.s0;	
 				break;
-				
 			case 1:
-				Arrival = findInArray(time_int, shuttle_info.northIthan);
-				Arrival_String = "North Ithan Gate";
+				Arrival = findInArray(time_int, shuttle_info.loc1);
+				Arrival_String = shuttle_info.s1;
 				break;
-		
 			case 2:
-				Arrival = findInArray(time_int, shuttle_info.falveyLibrary);
-				Arrival_String = "Falvey Libray";
+				Arrival = findInArray(time_int, shuttle_info.loc2);
+				Arrival_String = shuttle_info.s2;
 				break;
-			
 			case 3:
-				Arrival = findInArray(time_int, shuttle_info.tolentineHall);
-				Arrival_String = "Tolentine_Hall";
+				Arrival = findInArray(time_int, shuttle_info.loc3);
+				Arrival_String = shuttle_info.s3;
 				break;
 				
 			case 4:
-				Arrival = findInArray(time_int, shuttle_info.lawSchool);
-				Arrival_String = "the Law School";
+				Arrival = findInArray(time_int, shuttle_info.loc4);
+				Arrival_String = shuttle_info.s4;
 				break;
 				 
 			case 5:
-				Arrival = findInArray(time_int, shuttle_info.westCampus);
-				Arrival_String = "West Campus";
+				Arrival = findInArray(time_int, shuttle_info.loc5);
+				Arrival_String = shuttle_info.s5;
 				break;		
+			case 6: 
+				Arrival = findInArray(time_int, shuttle_info.loc6);
+				Arrival_String = shuttle_info.s6;
+				break;
+				
 		}
 		
 		//This switch case finds the departure time based on 
 		//the arrival time and departure location parameter set by the user
 		switch(start_loc){
 					
-			case 0:
-				Departure= findInArray(Arrival, shuttle_info.southCampus);
-				Departure_String = "South Campus";
-				break;
-			case 1:
-				Departure = findInArray(Arrival, shuttle_info.northIthan);
-				Departure_String = "North Ithan Gate";
-				break;
-			case 2:
-				Departure = findInArray(Arrival, shuttle_info.falveyLibrary);
-				Departure_String = "Falvey Libray";
-				break;
-			case 3:
-				Departure = findInArray(Arrival, shuttle_info.tolentineHall);
-				Departure_String = "Tolentine Hall";
-				break;
-			case 4:
-				Departure = findInArray(Arrival, shuttle_info.lawSchool);
-				Departure_String = "the Law School";
-				break;
-				
-			case 5:
-				Departure = findInArray(Arrival, shuttle_info.westCampus);
-				Departure_String = "West Campus";
-				break;
+		case 0:
+			Departure = findInArray(Arrival, shuttle_info.loc0);
+			Departure_String = shuttle_info.s0;	
+			break;
+		case 1:
+			Departure = findInArray(Arrival, shuttle_info.loc1);
+			Departure_String = shuttle_info.s1;
+			break;
+		case 2:
+			Departure = findInArray(Arrival, shuttle_info.loc2);
+			Departure_String = shuttle_info.s2;
+			break;
+		case 3:
+			Departure = findInArray(Arrival, shuttle_info.loc3);
+			Departure_String = shuttle_info.s3;
+			break;
+			
+		case 4:
+			Departure = findInArray(Arrival, shuttle_info.loc4);
+			Departure_String = shuttle_info.s4;
+			break;
+			 
+		case 5:
+			Departure= findInArray(Arrival, shuttle_info.loc5);
+			Departure_String = shuttle_info.s5;
+			break;		
+		case 6: 
+			Departure = findInArray(Arrival, shuttle_info.loc6);
+			Departure_String = shuttle_info.s6;
+			break;
 				
 				}
 	}
@@ -177,74 +197,49 @@ protected static String Result_String;
 			
 			if(timeArray[i]>time_int){
 				result = timeArray[i-1];
+				tripFound = true;
 				break outerloop;
 			}
 			else if (timeArray[i]==time_int){
 				result = timeArray[i];
+				tripFound = true;
 				break outerloop;
 			}else if(i + 1 == timeArray.length){
 				result = timeArray[i];
+				tripFound = false;
 				break outerloop;
 			}//end of if - else
 			++i;
 		}//end of while loop
-	}catch(Exception e){System.out.println("Sorry, no availible trips could be found for the time specified");
-						//System.exit(2);
+	}catch(Exception e){
+							tripFound = false; 
 						}
 	
 		return result;
 	}
 
 
+private static int formatTime(int hour, String minute) {
+		
 
-	private static int formatTime(String time_string) {
+		switch (Meridiem){
+			case 0: //time is AM
+				if (hour < 3){//Early morning
+				hour = hour + 24;
+				}else if (hour ==12){
+					hour = 24; //make 00:00 -> 24
+				}break;
+			case 1: //time is PM
+				if (hour == 12){
+					//Do nothing
+				}else{
+					hour = hour + 12; //Change to 24 hour format
+				}break;
 		
-		//Remove colon from string convert to integer
-		int arrive_before = Integer.parseInt(time_string.replaceAll("[\\D]",""));
-		
-		//Convert back to string and keep formatting (leading 0)
-		time_string = NumberFormat.getFormat("0000").format(arrive_before);
-		
-		//Check if the entered time is of the right format
-		if(time_string.length()<4||time_string.length()>5){ //length
-			System.err.println("ERROR: Make sure you enter the time in the format hh:mm");
-			//System.exit(0);
-		} else if((Integer.parseInt(time_string.substring(2, 4))>=60)||
-				Integer.parseInt(time_string.substring(0,2))>12){ 
-			System.err.println("ERROR: You entered an invalid time");
-			//System.exit(0);
 		}
-		
-
-		if(Meridiem==1){ //if the number is PM, change to 24 hour format
-		
-			String substring = time_string.substring(0,2);
 				
-			//change to 24 hr format
-			int hour = 12+Integer.parseInt(substring);
-			substring = Integer.toString(hour);
-			time_string = substring.concat(time_string.substring(2,4));
-				
-			arrive_before=Integer.parseInt(time_string);
-				
-			}else if(Meridiem == 1 && arrive_before < 300){
-
-				String substring = time_string.substring(0,2);
-				
-				int hour = Integer.parseInt(substring);
-				
-				if(arrive_before >= 1200 && arrive_before <= 1259){
-					hour = 12 + hour;
-					}
-					else{
-						hour = 24 + hour;
-					}
-				
-				substring = Integer.toString(hour);
-				time_string= substring.concat(time_string.substring(2,4));
-				arrive_before = Integer.parseInt(time_string);
-				
-			}
+				String tempString = Integer.toString(hour);
+				int arrive_before = Integer.parseInt(tempString + minute);
 		
 		return arrive_before;
 	
